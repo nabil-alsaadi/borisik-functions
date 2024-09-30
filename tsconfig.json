@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "declaration": true,
+    "removeComments": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "target": "es2017",
+    "sourceMap": true,
+    "outDir": "./dist",
+    "baseUrl": "./",
+    "paths": {
+      "@db/*": ["./src/db/*"]
+    },
+    "incremental": true,
+    "skipLibCheck": true,
+
+    // Add these to relax the strict checks while keeping your original settings
+    "strictPropertyInitialization": false,  // Allow uninitialized properties
+    "noImplicitAny": false  // Allow implicit any types
+  },
+  "compileOnSave": true,
+  "include": [
+    "src"
+  ]
+}
