@@ -1,3 +1,4 @@
+import { PaymentMethod } from 'src/payment-method/entities/payment-method.entity';
 import { Address } from '../../addresses/entities/address.entity';
 import { CoreEntity, CoreFirebaseEntity } from '../../common/entities/core.entity';
 import { Shop } from '../../shops/entities/shop.entity';
@@ -16,6 +17,7 @@ export class User extends CoreFirebaseEntity {
   // orders?: Order[];
   wallet?: any;
   isAdmin?: boolean = false;
+  payment_methods?: PaymentMethod[];
 }
 
 export class Permission extends CoreEntity {

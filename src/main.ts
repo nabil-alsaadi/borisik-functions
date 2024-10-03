@@ -89,7 +89,7 @@ import * as functions from 'firebase-functions';
 const server = express(); // Create an Express instance
 async function createNestServer(expressInstance: express.Express) {
   const app = await NestFactory.create(AppModule, new ExpressAdapter(expressInstance), { cors: true });
-  
+  // app.useGlobalGuards(new GlobalAuthGuard());
   // Set up CORS options
   const corsOptions: CorsOptions = {
     origin: '*', // Allow all origins

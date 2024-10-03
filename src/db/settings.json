@@ -3,24 +3,34 @@
   "options": {
     "deliveryTime": [
       {
-        "title": "Express Delivery 123",
-        "description": "90 min express delivery"
+        "title": "Express Delivery",
+        "title_ru": "Экспресс-доставка",
+        "description": "90 min express delivery",
+        "description_ru": "Экспресс-доставка за 90 минут"
       },
       {
         "title": "Morning",
-        "description": "8.00 AM - 11.00 AM"
+        "title_ru": "Утро",
+        "description": "8.00 AM - 11.00 AM",
+        "description_ru": "8.00 - 11.00"
       },
       {
         "title": "Noon",
-        "description": "11.00 AM - 2.00 PM"
+        "title_ru": "Полдень",
+        "description": "11.00 AM - 2.00 PM",
+        "description_ru": "11.00 - 14.00"
       },
       {
         "title": "Afternoon",
-        "description": "2.00 PM - 5.00 PM"
+        "title_ru": "Послеобеденное время",
+        "description": "2.00 PM - 5.00 PM",
+        "description_ru": "14.00 - 17.00"
       },
       {
         "title": "Evening",
-        "description": "5.00 PM - 8.00 PM"
+        "title_ru": "Вечер",
+        "description": "5.00 PM - 8.00 PM",
+        "description_ru": "17.00 - 20.00"
       }
     ],
     "isProductReview": false,

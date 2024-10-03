@@ -24,6 +24,7 @@ export class TypesController {
 
   @Get()
   findAll(@Query() query: GetTypesDto) {
+    console.log('tpes',query)
     return this.typesService.getTypes(query);
   }
 

@@ -140,7 +140,7 @@ export class StripePaymentService {
         customer: customer_id,
       });
     } catch (error) {
-      console.log(error);
+      console.log('attachPaymentMethodToCustomer error=======',error);
     }
   }
 
@@ -192,22 +192,24 @@ export class StripePaymentService {
 
   async makePaymentIntentParam(order: Partial<Order>, me: User) {
     const customerList = await this.listAllCustomer();
-    const currentCustomer = customerList.data.find(
+    let currentCustomer = customerList.data.find(
       (customer: StripeCustomer) => customer.email === me.email,
     );
-    console.log('currentCustomer',currentCustomer)
+    console.log('currentCustomer',currentCustomer,!!currentCustomer,!currentCustomer)
     if (!currentCustomer) {
+      console.log('new customer condtion')
       const newCustomer = await this.createCustomer({
         name: me.name,
         email: me.email,
       });
-      currentCustomer.id = newCustomer.id;
-      console.log('newCustomer',newCustomer)
+      console.log('newCustomer',newCustomer,newCustomer.id)
+      currentCustomer = newCustomer;
+      
     }
     return {
       customer: currentCustomer.id,
       amount: Math.ceil(order.paid_total * 100),
-      currency: DEFUALT_CURRENCY || setting.options.currency,
+      currency: DEFUALT_CURRENCY,
       payment_method_types: ['card'],
       metadata: {
         order_tracking_number: order.tracking_number,

@@ -29,13 +29,13 @@ export class PaymentMethodController {
   }
 
   @Get()
-  findAll(@Query() getTaxesDto: GetPaymentMethodsDto) {
-    return this.paymentMethodService.findAll();
+  findAll(@Query() getTaxesDto: GetPaymentMethodsDto,@Req() req) {
+    return this.paymentMethodService.findAll(req.user);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.paymentMethodService.findOne(+id);
+  findOne(@Param('id') id: string,@Req() req) {
+    return this.paymentMethodService.findOne(+id,req.user);
   }
 
   @Put(':id')
@@ -47,8 +47,8 @@ export class PaymentMethodController {
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.paymentMethodService.remove(+id);
+  remove(@Param('id') id: string,@Req() req) {
+    return this.paymentMethodService.remove(+id,req.user);
   }
 }
 
@@ -70,7 +70,7 @@ export class SavePaymentMethodController {
 export class SetDefaultCartController {
   constructor(private readonly paymentMethodService: PaymentMethodService) {}
   @Post()
-  setDefaultCart(@Body() defaultCart: DefaultCart) {
-    return this.paymentMethodService.saveDefaultCart(defaultCart);
+  setDefaultCart(@Body() defaultCart: DefaultCart,@Req() req) {
+    return this.paymentMethodService.saveDefaultCart(defaultCart, req.user);
   }
 }

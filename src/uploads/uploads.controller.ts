@@ -3,32 +3,41 @@ import {
   Post,
   UseInterceptors,
   UploadedFiles,
+  BadRequestException,
 } from '@nestjs/common';
-import { FilesInterceptor } from '@nestjs/platform-express';
+// import { FilesInterceptor } from '@nestjs/platform-express';
 import { UploadsService } from './uploads.service';
+import { FileInterceptor } from '../common/middleware/file.interceptor';
 
 @Controller('attachments')
 export class UploadsController {
   constructor(private readonly uploadsService: UploadsService) {}
 
   @Post()
-  @UseInterceptors(FilesInterceptor('attachment[]'))
-  async uploadFile(@UploadedFiles() attachment: Array<Express.Multer.File>) {
-    // console.log(attachment);
-    // return [
-    //   {
-    //     id: '883',
-    //     original:
-    //       'https://pickbazarlaravel.s3.ap-southeast-1.amazonaws.com/881/aatik-tasneem-7omHUGhhmZ0-unsplash%402x.png',
-    //     thumbnail:
-    //       'https://pickbazarlaravel.s3.ap-southeast-1.amazonaws.com/881/conversions/aatik-tasneem-7omHUGhhmZ0-unsplash%402x-thumbnail.jpg',
-    //   },
-    // ];
-    console.log('attachment =========================',attachment)
+  // @UseInterceptors(FilesInterceptor('attachment[]'))
+  @UseInterceptors(
+    new FileInterceptor('attachment[]', 2, {
+      limits: {
+        // limit to 100Mb
+        fileSize: 1024 * 1024 * 100,
+      },
+    }),
+  )
+  async uploadFile(@UploadedFiles() attachment?: Array<Express.Multer.File>) {
+    if (!attachment || attachment.length === 0) {
+      console.error('No file received');
+      throw new BadRequestException('No file received');
+    }
     const uploadPromises = attachment.map(file =>
       this.uploadsService.uploadFile(file),
     );
-    const result = await Promise.all(uploadPromises);
-    return result;
+    try {
+      const result = await Promise.all(uploadPromises);
+      return result;
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      throw error;
+    }
+    // return result;
   }
 }

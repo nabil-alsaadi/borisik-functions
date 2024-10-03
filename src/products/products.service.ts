@@ -14,7 +14,7 @@ import { Category } from '../categories/entities/category.entity';
 import { FirebaseService } from '../firebase/firebase.service';
 import { applyCategoryTranslations, applyTranslations, getSearchParam, getType } from '../utils/utils';
 
-const products = plainToClass(Product, productsJson);
+// const products = plainToClass(Product, productsJson);
 const popularProducts = plainToClass(Product, popularProductsJson);
 const bestSellingProducts = plainToClass(Product, bestSellingProductsJson);
 
@@ -31,11 +31,11 @@ const options = {
   ],
   threshold: 0.3,
 };
-const fuse = new Fuse(products, options);
+// const fuse = new Fuse(products, options);
 
 @Injectable()
 export class ProductsService {
-  private products: any = products;
+  // private products: any = products;
   private popularProducts: any = popularProducts;
   private bestSellingProducts: any = bestSellingProducts;
   constructor(private readonly firebaseService: FirebaseService) {}
@@ -117,7 +117,7 @@ export class ProductsService {
       return product;
     });
 
-    console.log('mappedProducts===========',mappedProducts)
+    // console.log('mappedProducts===========',mappedProducts)
   
     // If there's no search, return all products
     if (!searchName && !searchCategory && !searchStatus) {
@@ -190,19 +190,13 @@ export class ProductsService {
     };
   }
 
-  getPopularProducts({ limit, type_slug }: GetPopularProductsDto): Product[] {
-    let data: any = this.popularProducts;
-    if (type_slug) {
-      data = fuse.search(type_slug)?.map(({ item }) => item);
-    }
-    return data?.slice(0, limit);
+  async getPopularProducts({ limit, type_slug }: GetPopularProductsDto,language = 'en'): Promise<Product[]> {
+    let products = await this.getProducts({language});
+    return products.data.slice(0, limit);
   }
-  getBestSellingProducts({ limit, type_slug }: GetBestSellingProductsDto): Product[] {
-    let data: any = this.bestSellingProducts;
-    if (type_slug) {
-      data = fuse.search(type_slug)?.map(({ item }) => item);
-    }
-    return data?.slice(0, limit);
+  async getBestSellingProducts({ limit, type_slug }: GetBestSellingProductsDto,language = 'en'): Promise<Product[]> {
+    let products = await this.getProducts({language});
+    return products.data.slice(0, limit);
   }
 
   async getProductsStock({ limit, page, search }: GetProductsDto): Promise<any> {
@@ -410,7 +404,13 @@ export class ProductsService {
   // }
   
 
-  remove(id: number) {
-    return `This action removes a #${id} product`;
+  async remove(id: string) {
+    // Assuming you have a collection name (for example, 'products')
+    const collectionName = 'products';
+    
+    // Call the removeDocument method from FirebaseService to delete the document
+    await this.firebaseService.removeDocument(collectionName, id);
+    
+    return `This action removed the product with id #${id}`;
   }
 }

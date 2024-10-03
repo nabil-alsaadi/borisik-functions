@@ -77,7 +77,7 @@ export class OrdersController {
         this.ordersService.stripePay(order);
         break;
       case 'paypal':
-        this.ordersService.paypalPay(order);
+        // this.ordersService.paypalPay(order);
         break;
       default:
         break;

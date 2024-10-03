@@ -1,5 +1,5 @@
 import { PartialType, PickType } from '@nestjs/swagger';
-import { IsString, Matches } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsString, Matches } from 'class-validator';
 import { CoreMutationOutput } from '../../common/dto/core-mutation-output.dto';
 import { User } from '../../users/entities/user.entity';
 
@@ -13,9 +13,20 @@ export class RegisterDto extends PickType(User, ['name', 'email', 'password']) {
   permission: Permission = Permission.CUSTOMER;
 }
 
+// export class LoginDto extends PartialType(
+//   PickType(User, ['email', 'password']),
+// ) {}
 export class LoginDto extends PartialType(
   PickType(User, ['email', 'password']),
-) {}
+) {
+  @IsEmail({}, { message: 'Please enter a valid email address' })
+  @IsNotEmpty({ message: 'Email is required' })
+  email: string;
+
+  @IsString({ message: 'Password must be a string' })
+  @IsNotEmpty({ message: 'Password is required' })
+  password: string;
+}
 
 export class SocialLoginDto {
   provider: string;

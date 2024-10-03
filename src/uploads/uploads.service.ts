@@ -7,8 +7,13 @@ export class UploadsService {
   constructor(private readonly firebaseService: FirebaseService) {}
 
   async uploadFile(attachment: Express.Multer.File) {
+    console.log('async uploadFile(attachment: Express.Multer.File) {')
+    if (attachment.size > 10 * 1024 * 1024) { // 10MB size limit
+      throw new Error('File exceeds size limit');
+    }
     const uniqueId = uuidv4();
     const fileUrl = await this.firebaseService.uploadFile(attachment);
+   
     return {
       id: uniqueId, // Use actual file ID if you have one
       original: fileUrl,

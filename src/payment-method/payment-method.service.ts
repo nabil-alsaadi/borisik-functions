@@ -16,29 +16,32 @@ import { PaymentGateWay } from './entities/payment-gateway.entity';
 import { PaymentMethod } from './entities/payment-method.entity';
 import { PaymentGatewayType } from '../orders/entities/order.entity';
 import { User } from '../users/entities/user.entity';
+import { FirebaseService } from '../firebase/firebase.service';
 
-const paymentMethods = plainToClass(PaymentMethod, cards);
+// const paymentMethods = plainToClass(PaymentMethod, cards);
 const paymentGateways = plainToClass(PaymentGateWay, paymentGatewayJson);
 @Injectable()
 export class PaymentMethodService {
-  private paymentMethods: PaymentMethod[] = paymentMethods;
+  // private paymentMethods: PaymentMethod[] = paymentMethods;
   constructor(
     private readonly authService: AuthService,
     private readonly stripeService: StripePaymentService,
     private readonly settingService: SettingsService,
+    private readonly firebaseService: FirebaseService,
   ) {}
   // private setting: Setting = this.settingService.findAll();
 
   async create(createPaymentMethodDto: CreatePaymentMethodDto,user: User) {
+    let paymentMethods = user.payment_methods  ?? []
     try {
-      const defaultCard = this.paymentMethods.find(
+      const defaultCard = paymentMethods.find(
         (card: PaymentMethod) => card.default_card,
       );
-      if (!defaultCard || this.paymentMethods.length === 0) {
+      if (!defaultCard || paymentMethods.length === 0) {
         createPaymentMethodDto.default_card = true;
       }
       if (createPaymentMethodDto.default_card) {
-        this.paymentMethods = [...this.paymentMethods].map(
+        paymentMethods = [...paymentMethods].map(
           (card: PaymentMethod) => {
             card.default_card = false;
             return card;
@@ -46,38 +49,48 @@ export class PaymentMethodService {
         );
       }
       const paymentGateway: string = PaymentGatewayType.STRIPE as string;
-      return await this.saveCard(createPaymentMethodDto, paymentGateway,user);
+      return await this.saveCard(createPaymentMethodDto, paymentGateway,user,paymentMethods);
     } catch (error) {
       console.log(error);
-      return this.paymentMethods[0];
+      return paymentMethods[0];
     }
   }
 
-  findAll() {
-    return this.paymentMethods;
+  findAll(user: User) {
+    let paymentMethods = user.payment_methods  ?? []
+    return paymentMethods;
   }
 
-  findOne(id: number) {
-    return this.paymentMethods.find(
+  findOne(id: number,user: User) {
+    let paymentMethods = user.payment_methods  ?? []
+    return paymentMethods.find(
       (pm: PaymentMethod) => pm.id === Number(id),
     );
   }
 
   update(id: number, updatePaymentMethodDto: UpdatePaymentMethodDto) {
-    return this.findOne(id);
+    return //this.findOne(id);
   }
-
-  remove(id: number) {
-    const card: PaymentMethod = this.findOne(id);
-    this.paymentMethods = [...this.paymentMethods].filter(
+  async saveToUser(data: Partial<User>, id: string) {
+    await this.firebaseService.setWithMerge('users',id,data)
+  }
+  async remove(id: number,user: User) {
+    const card: PaymentMethod = this.findOne(id,user);
+    let paymentMethods = user.payment_methods  ?? []
+    const filtered = [...paymentMethods].filter(
       (cards: PaymentMethod) => cards.id !== id,
     );
+    const data = {
+      payment_methods: filtered
+    }
+    await this.saveToUser(data,user.id);
     return card;
   }
 
-  saveDefaultCart(defaultCart: DefaultCart) {
+  async saveDefaultCart(defaultCart: DefaultCart,user: User) {
     const { method_id } = defaultCart;
-    this.paymentMethods = [...this.paymentMethods].map((c: PaymentMethod) => {
+    let paymentMethods = user.payment_methods  ?? []
+    const updatedpaymentMethods = [...paymentMethods].map((c: PaymentMethod) => {
       if (c.id === Number(method_id)) {
         c.default_card = true;
       } else {
@@ -85,13 +98,19 @@ export class PaymentMethodService {
       }
       return c;
     });
-    return this.findOne(Number(method_id));
+    const data = {
+      payment_methods: updatedpaymentMethods
+    }
+    await this.saveToUser(data,user.id)
+    const newUser: User = await this.firebaseService.getDocumentById('users',user.id)
+    return this.findOne(Number(method_id),newUser);
   }
 
   async savePaymentMethod(createPaymentMethodDto: CreatePaymentMethodDto, user: User) {
+    let paymentMethods = user.payment_methods  ?? []
     const paymentGateway: string = PaymentGatewayType.STRIPE as string;
     try {
-      return this.saveCard(createPaymentMethodDto, paymentGateway, user);
+      return this.saveCard(createPaymentMethodDto, paymentGateway, user,paymentMethods);
     } catch (err) {
       console.log(err);
     }
@@ -100,21 +119,22 @@ export class PaymentMethodService {
   async saveCard(
     createPaymentMethodDto: CreatePaymentMethodDto,
     paymentGateway: string,
-    user: User
+    user: User,
+    paymentMethods: PaymentMethod[]
   ) {
     const { method_key, default_card } = createPaymentMethodDto;
-    const defaultCard = this.paymentMethods.find(
+    const defaultCard = paymentMethods.find(
       (card: PaymentMethod) => card.default_card,
     );
-    if (!defaultCard || this.paymentMethods.length === 0) {
+    if (!defaultCard || paymentMethods.length === 0) {
       createPaymentMethodDto.default_card = true;
     }
     const retrievedPaymentMethod =
       await this.stripeService.retrievePaymentMethod(method_key);
     if (
-      this.paymentMethodAlreadyExists(retrievedPaymentMethod.card.fingerprint)
+      this.paymentMethodAlreadyExists(retrievedPaymentMethod.card.fingerprint,paymentMethods)
     ) {
-      return this.paymentMethods.find(
+      return paymentMethods.find(
         (pMethod: PaymentMethod) => pMethod.method_key === method_key,
       );
     } else {
@@ -123,22 +143,27 @@ export class PaymentMethodService {
         paymentGateway,
         user
       );
-      this.paymentMethods.push(paymentMethod);
+      const data = {
+        payment_methods: [...paymentMethods,
+        paymentMethod]
+      }
+      // paymentMethods.push(paymentMethod);
+      await this.saveToUser(data,user.id);
       return paymentMethod;
     }
-    switch (paymentGateway) {
-      case 'stripe':
-        break;
-      case 'paypal':
-        // TODO
-        //paypal code goes here
-        break;
-      default:
-        break;
-    }
+    // switch (paymentGateway) {
+    //   case 'stripe':
+    //     break;
+    //   case 'paypal':
+    //     // TODO
+    //     //paypal code goes here
+    //     break;
+    //   default:
+    //     break;
+    // }
   }
-  paymentMethodAlreadyExists(fingerPrint: string) {
-    const paymentMethod = this.paymentMethods.find(
+  paymentMethodAlreadyExists(fingerPrint: string, paymentMethods: PaymentMethod[]) {
+    const paymentMethod = paymentMethods.find(
       (pMethod: PaymentMethod) => pMethod.fingerprint === fingerPrint,
     );
     if (paymentMethod) {

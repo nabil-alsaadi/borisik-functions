@@ -29,7 +29,7 @@ dotenv.config();
 import { Module, Global } from '@nestjs/common';
 import * as admin from 'firebase-admin';
 import { FirebaseService } from './firebase.service';
-import { FIREBASE_STORAGE_BUCKET } from '../utils/config.util';
+import { FIREBASE_STORAGE_BUCKET, MY_FIREBASE_PROJECT_ID } from '../utils/config.util';
 
 @Global()
 @Module({
@@ -43,8 +43,8 @@ import { FIREBASE_STORAGE_BUCKET } from '../utils/config.util';
           console.log('Running in Firebase Emulator');
           return admin.initializeApp({
             credential: admin.credential.cert(require('../../service-account.json')),
-            databaseURL: `https://${process.env.MY_FIREBASE_PROJECT_ID}.firebaseio.com`,
-            storageBucket: process.env.MY_FIREBASE_STORAGE_BUCKET,
+            databaseURL: `https://${MY_FIREBASE_PROJECT_ID}.firebaseio.com`,
+            storageBucket: FIREBASE_STORAGE_BUCKET,
           });
         } else {
           // Running in Firebase Cloud (production), use default credentials

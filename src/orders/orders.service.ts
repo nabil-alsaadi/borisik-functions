@@ -13,7 +13,7 @@ import { AuthService } from '../auth/auth.service';
 import { paginate } from '../common/pagination/paginate';
 import { PaymentIntent } from '../payment-intent/entries/payment-intent.entity';
 import { PaymentGateWay } from '../payment-method/entities/payment-gateway.entity';
-import { PaypalPaymentService } from '../payment/paypal-payment.service';
+// import { PaypalPaymentService } from '../payment/paypal-payment.service';
 import { StripePaymentService } from '../payment/stripe-payment.service';
 import { Setting } from '../settings/entities/setting.entity';
 import {
@@ -58,19 +58,19 @@ const options = {
 const fuse = new Fuse(orderStatus, options);
 
 const orderFiles = plainToClass(OrderFiles, orderFilesJson);
-const settings = plainToClass(Setting, setting);
+// const settings = plainToClass(Setting, setting);
 
 @Injectable()
 export class OrdersService {
   private orders: Order[] = orders;
   private orderStatus: OrderStatus[] = orderStatus;
   private orderFiles: OrderFiles[] = orderFiles;
-  private setting: Setting = { ...settings };
+  // private setting: Setting = { ...settings };
 
   constructor(
-    private readonly authService: AuthService,
+    // private readonly authService: AuthService,
     private readonly stripeService: StripePaymentService,
-    private readonly paypalService: PaypalPaymentService,
+    // private readonly paypalService: PaypalPaymentService,
     private readonly firebaseService: FirebaseService
   ) {}
   // async create(createOrderInput: CreateOrderDto): Promise<Order> {
@@ -232,20 +232,22 @@ export class OrdersService {
         ) {
           const paymentIntent = await this.processPaymentIntent(
             order,
-            this.setting,
+            // this.setting,
             user
           );
-          if(!!order.payment_intent) {
+          console.log('paymentIntent',paymentIntent)
+          if(!!paymentIntent) {
             order.payment_intent = paymentIntent;
           }
           else {
-            throw new BadRequestException("something went wrong, try again later")
+            throw new BadRequestException("create payment failed, try again later")
           }
           
         }
 
-       // return order;
+        // return order;
     } catch (error) {
+      console.log('create ordew error',error)
       throw new BadRequestException("something went wrong, try again later")
       //return order;
     }
@@ -254,7 +256,7 @@ export class OrdersService {
 
     // Step 7: Retrieve and return the stored order
     const storedOrder = await this.firebaseService.getDocumentById<Order>('orders', id);
-  
+    console.log('storedOrder =============',storedOrder)
     return storedOrder;
    
     // Step 6: Save the order to Firebase
@@ -818,7 +820,7 @@ export class OrdersService {
    */
   async processPaymentIntent(
     order: Partial<Order>,
-    setting: Setting,
+    // setting: Setting,
     user: User
   ): Promise<PaymentIntent> {
     // const paymentIntent = paymentIntents.find(
@@ -886,7 +888,7 @@ export class OrdersService {
         return await this.stripeService.createPaymentIntent(paymentIntentParam);
       case PaymentGatewayType.PAYPAL:
         // here goes PayPal
-        return this.paypalService.createPaymentIntent(order);
+        // return this.paypalService.createPaymentIntent(order);
         break;
 
       default:
@@ -910,17 +912,17 @@ export class OrdersService {
     // this.orders[0]['payment_intent'] = null;
   }
 
-  async paypalPay(order: Order) {
-    this.orders[0]['order_status'] = OrderStatusType.PROCESSING;
-    this.orders[0]['payment_status'] = PaymentStatusType.SUCCESS;
-    const { status } = await this.paypalService.verifyOrder(
-      order.payment_intent.payment_intent_info.payment_id,
-    );
-    this.orders[0]['payment_intent'] = null;
-    if (status === 'COMPLETED') {
-      //console.log('payment Success');
-    }
-  }
+  // async paypalPay(order: Order) {
+  //   this.orders[0]['order_status'] = OrderStatusType.PROCESSING;
+  //   this.orders[0]['payment_status'] = PaymentStatusType.SUCCESS;
+  //   const { status } = await this.paypalService.verifyOrder(
+  //     order.payment_intent.payment_intent_info.payment_id,
+  //   );
+  //   this.orders[0]['payment_intent'] = null;
+  //   if (status === 'COMPLETED') {
+  //     //console.log('payment Success');
+  //   }
+  // }
 
   /**
    * This method will set order status and payment status

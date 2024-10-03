@@ -5,7 +5,7 @@ import { StripePaymentService } from './stripe-payment.service';
 
 @Module({
   imports: [AuthModule],
-  providers: [StripePaymentService, PaypalPaymentService],
-  exports: [StripePaymentService, PaypalPaymentService],
+  providers: [StripePaymentService],
+  exports: [StripePaymentService],
 })
 export class PaymentModule {}
