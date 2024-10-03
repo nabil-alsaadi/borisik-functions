@@ -18,6 +18,7 @@ export class User extends CoreFirebaseEntity {
   wallet?: any;
   isAdmin?: boolean = false;
   payment_methods?: PaymentMethod[];
+  wishlist?: string[];
 }
 
 export class Permission extends CoreEntity {

@@ -7,20 +7,24 @@ import {
   Post,
   Put,
   Query,
+  Req,
+  UseGuards,
 } from '@nestjs/common';
 import { CreateWishlistDto } from './dto/create-wishlists.dto';
 import { GetWishlistDto } from './dto/get-wishlists.dto';
 import { UpdateWishlistDto } from './dto/update-wishlists.dto';
 import { MyWishlistService } from './my-wishlists.service';
+import { AuthGuard } from '@nestjs/passport';
 
+@UseGuards(AuthGuard('jwt'))
 @Controller('my-wishlists')
 export class MyWishlistsController {
   constructor(private myWishlistService: MyWishlistService) {}
 
   // Get All
   @Get()
-  findAll(@Query() query: GetWishlistDto) {
-    return this.myWishlistService.findAMyWishlists(query);
+  findAll(@Query() query: GetWishlistDto,@Req() req) {
+    return this.myWishlistService.findAMyWishlists(query,req.user);
   }
   // Get single
   @Get(':id')
@@ -45,7 +49,15 @@ export class MyWishlistsController {
 
   // delete
   @Delete(':id')
-  delete(@Param('id') id: string) {
-    return this.myWishlistService.delete(+id);
+  delete(@Param('id') id: string,@Req() req) {
+    return this.myWishlistService.delete(id,req.user);
+  }
+  @Post('/toggle')
+  toggle(@Body() CreateWishlistDto: CreateWishlistDto,@Req() req) {
+    return this.myWishlistService.toggle(CreateWishlistDto,req.user);
+  }
+  @Get('/in_wishlist/:product_id')
+  inWishlist(@Param('product_id') id: string,@Req() req) {
+    return this.myWishlistService.isInWishlist(id,req.user);
   }
 }

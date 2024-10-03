@@ -11,6 +11,7 @@ export class GetWishlistDto extends PaginationArgs {
   orderBy?: QueryReviewsOrderByColumn;
   sortedBy?: SortOrder;
   search?: string;
+  language?: string;
 }
 
 export enum QueryReviewsOrderByColumn {
