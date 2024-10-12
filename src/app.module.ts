@@ -45,6 +45,7 @@ import { NotifyLogsModule } from './notify-logs/notify-logs.module';
 import { FirebaseModule } from './firebase/firebase.module';
 import { LoggerMiddleware } from './common/middleware/logger.middleware';
 import { STRIPE_API_KEY } from './utils/config.util';
+import { PublicationsModule } from './publications/publications.module';
 
 @Module({
   imports: [
@@ -107,6 +108,7 @@ import { STRIPE_API_KEY } from './utils/config.util';
     FlashSaleModule,
     RefundPoliciesModule,
     RefundReasonModule,
+    PublicationsModule
   ],
   controllers: [],
   providers: [],

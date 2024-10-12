@@ -10,6 +10,7 @@ import {
   Put,
   Query,
   Req,
+  UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
 import { CreateOrderStatusDto } from './dto/create-order-status.dto';
@@ -41,6 +42,7 @@ export class OrdersController {
 
   @Get()
   async getOrders(@Req() req,@Query() query: GetOrdersDto): Promise<OrderPaginator> {
+    // throw new UnauthorizedException();
     return this.ordersService.getOrders(query,req.user);
   }
 
