@@ -17,7 +17,7 @@ import { GetPublicationDto } from './dto/get-publications.dto';
   @Controller('publications')
   export class PublicationsController {
     constructor(private readonly publicationsService: PublicationsService) {}
-  
+
     @Get()
     async findAll(@Query() query: GetPublicationDto) {
       return this.publicationsService.findAll(query);

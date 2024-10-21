@@ -5,10 +5,10 @@ import { PaginationArgs } from '../../common/dto/pagination-args.dto';
 export class CreatePublicationDto {
 //   @IsString()
 //   @IsNotEmpty()
-  title: string;
+  title?: string;
   slug: string;
 //   @IsString()
-  description: string;
+  description?: string;
 
   image?: Attachment;
 }

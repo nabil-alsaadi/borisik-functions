@@ -89,7 +89,7 @@ export class ProductsService {
   //   };
   // }
 
-  async getProducts({ search, language }: GetProductsDto): Promise<any> {
+  async getProducts({ search, language, sortedBy, orderBy }: GetProductsDto): Promise<any> {
     const searchCategory = getSearchParam(search, 'categories.slug');
     const searchName = getSearchParam(search, 'name');
     const searchStatus = getSearchParam(search, 'status');
@@ -117,23 +117,14 @@ export class ProductsService {
       return product;
     });
 
-    // console.log('mappedProducts===========',mappedProducts)
-  
-    // If there's no search, return all products
-    if (!searchName && !searchCategory && !searchStatus) {
-      return {
-        data: mappedProducts,
-      };
-    }
+    // if (!searchName && !searchCategory && !searchStatus) {
+    //   return {
+    //     data: mappedProducts,
+    //   };
+    // }
   
     let filteredProducts = mappedProducts;
   
-    // Apply category filtering manually
-    // if (searchCategory) {
-    //   filteredProducts = filteredProducts.filter(product =>
-    //     product.categories_ids.includes(searchCategory)
-    //   );
-    // }
     if (searchCategory) {
       filteredProducts = filteredProducts.filter(product =>
         product.categories.some(cat => cat?.slug === searchCategory)
@@ -158,6 +149,30 @@ export class ProductsService {
     if (searchName) {
       const fuseResults = fuse.search(searchName);
       filteredProducts = fuseResults.map(result => result.item);
+    }
+
+    console.log('orderBy ==========',orderBy)
+    if (orderBy) {
+      filteredProducts = filteredProducts.sort((a, b) => {
+        let fieldA = a[orderBy];
+        let fieldB = b[orderBy];
+    
+        // Check the types of fieldA and fieldB
+        if (typeof fieldA === 'number' && typeof fieldB === 'number') {
+          // If both are numbers, compare as numbers
+          return sortedBy === 'asc' ? fieldA - fieldB : fieldB - fieldA;
+        } else if (typeof fieldA === 'string' && typeof fieldB === 'string') {
+          // If both are strings, compare as strings (localeCompare for better handling)
+          return sortedBy === 'asc'
+            ? fieldA.localeCompare(fieldB)
+            : fieldB.localeCompare(fieldA);
+        } else {
+          // Fallback for mixed types (numbers vs strings)
+          return sortedBy === 'asc'
+            ? String(fieldA).localeCompare(String(fieldB))
+            : String(fieldB).localeCompare(String(fieldA));
+        }
+      });
     }
   
     return {

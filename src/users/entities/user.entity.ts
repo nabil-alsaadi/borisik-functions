@@ -1,4 +1,4 @@
-import { PaymentMethod } from 'src/payment-method/entities/payment-method.entity';
+import { PaymentMethod } from '../../payment-method/entities/payment-method.entity';
 import { Address } from '../../addresses/entities/address.entity';
 import { CoreEntity, CoreFirebaseEntity } from '../../common/entities/core.entity';
 import { Shop } from '../../shops/entities/shop.entity';

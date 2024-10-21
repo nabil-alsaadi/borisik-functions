@@ -1,5 +1,5 @@
-import { Attachment } from "src/common/entities/attachment.entity";
-import { CoreFirebaseEntity } from "src/common/entities/core.entity";
+import { Attachment } from "../../common/entities/attachment.entity";
+import { CoreFirebaseEntity } from "../../common/entities/core.entity";
 
 export class Publication extends CoreFirebaseEntity {
     title: string;
@@ -7,8 +7,8 @@ export class Publication extends CoreFirebaseEntity {
     image?: Attachment;
     translations?: {
         [languageCode: string]: {
-            name: string;
-            description?: string;
+            title: string;
+            description: string;
         };
     };
 }

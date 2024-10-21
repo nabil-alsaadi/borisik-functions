@@ -7,7 +7,7 @@ import { Category } from './entities/category.entity';
 import Fuse from 'fuse.js';
 import categoriesJson from '../db/categories.json';
 import { FirebaseService } from '../firebase/firebase.service';
-import { applyCategoryTranslations, getType } from '../utils/utils';
+import { applyCategoryTranslations, getSearchParam, getType } from '../utils/utils';
 
 const categories = plainToClass(Category, categoriesJson);
 const options = {
@@ -77,48 +77,59 @@ export class CategoriesService {
   }
 
   async getCategories({ limit, page, search, parent, language }: GetCategoriesDto) {
-    // console.log('parent,parent=============',parent)
-    // return {"data":[{"type_id":1,"translated_languages":["en"],"icon":null,"name":"Salamon Caviar","language":"en","type":{"id":1,"slug":"grocery"},"slug":"salamon-caviar","parent_id":1,"id":2,"children":[]},{"parent":null,"parent_id":null,"type_id":1,"translated_languages":["en"],"icon":"FruitsVegetable","name":"Caviar","language":"en","type":{"id":1,"slug":"grocery"},"slug":"caviar","children_ids":["2hE3KDMNTGRlrGOOI6IP","NZv9HCienO6n5esbijNL"],"id":1,"children":[{"type_id":1,"translated_languages":["en"],"icon":null,"name":"Salamon Caviar","language":"en","type":{"id":1,"slug":"grocery"},"slug":"salamon-caviar","parent_id":1,"id":2,"children":[]},{"type_id":1,"translated_languages":["en"],"icon":null,"name":"Sturgeon Caviar","language":"en","type":{"id":1,"slug":"grocery"},"slug":"sturgeon-caviar","parent_id":1,"id":3,"children":[]}]}]}
+    const searchName = getSearchParam(search, 'name');
     let cats: Category[] = await this.firebaseService.getCollection('categories');
     const categoryMap = new Map<string, Category>();
 
     cats.forEach(category => {  
-      categoryMap.set(category.id, category); // Store each category by its ID
+      categoryMap.set(category.id, category);
     });
     
-    // console.log('categories =========1firebase',categoryMap);
     const mappedCategories = cats.map(category => {
       category = applyCategoryTranslations(category,language);
       if (category.children_ids) {
-        // Fetch each child by ID from the categoryMap and assign it to the parent's children array
-        category.children = category.children_ids.map(childId => {
+       category.children = category.children_ids.map(childId => {
           const cat = categoryMap.get(childId)
-          // cat.parent = { ...categoryMap.get(cat.parent_id), children: undefined };
           return cat;
         }).filter(Boolean);
       } else {
-        category.children = []; // Ensure it has an empty children array if there are no children
+        category.children = [];
       }
-      // if (category.parent_id && categoryMap.get(category.parent_id)) {
-      //   // Assign parent but do not include its children (break the circular reference)
-      //   category.parent = { ...categoryMap.get(category.parent_id), children: undefined };
-      // }
       
       return category;
     });
     // console.log('categories =========after', JSON.stringify(mappedCategories, null, 2));
-    var filtered = parent === undefined ? mappedCategories : mappedCategories.filter(category => {
-      console.log('category.parent_id,parent',(category.parent_id),(parent))
-      if (parent === 'null') {
-        return category.parent_id === null;
-      }
-      return category.parent_id === parent
-    })
-    console.log('filtered',filtered)
+    var filtered = mappedCategories
+
+
+    if (searchName && searchName !== "") {
+      const fuseOptions = {
+        keys: ['name'], // Search only by name
+        threshold: 0.4, // Fuzziness threshold (lower is stricter)
+      };
+      const fuse = new Fuse(filtered, fuseOptions);
+      const fuseResults = fuse.search(searchName);
+      filtered = fuseResults.map(result => this.removeChildrenForSearch(result.item));
+    }
+    else {
+      filtered = parent === undefined ? mappedCategories : mappedCategories.filter(category => {
+        console.log('category.parent_id,parent',(category.parent_id),(parent))
+        if (parent === 'null') {
+          return category.parent_id === null;
+        }
+        return category.parent_id === parent
+      })
+    }
+    
 
     return {
       data: filtered,
     };
+  }
+  removeChildrenForSearch(category: Category) {
+    const cat = {...category}
+    cat.children = []
+    return cat
   }
 
   async getCategory(param: string, language: string = "en"): Promise<Category> {

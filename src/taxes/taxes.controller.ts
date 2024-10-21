@@ -7,13 +7,17 @@ import {
   Param,
   Delete,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import { TaxesService } from './taxes.service';
 import { CreateTaxDto } from './dto/create-tax.dto';
 import { UpdateTaxDto } from './dto/update-tax.dto';
 import { GetTaxesDto } from './dto/get-taxes.dto';
+import { AdminGuard } from '../common/guards/admin.guard';
+import { PublicGuard } from '../common/guards/public.guard';
 
 @Controller('taxes')
+@UseGuards(AdminGuard)
 export class TaxesController {
   constructor(private readonly taxesService: TaxesService) {}
 
@@ -21,7 +25,7 @@ export class TaxesController {
   create(@Body() createTaxDto: CreateTaxDto) {
     return this.taxesService.create(createTaxDto);
   }
-
+  
   @Get()
   findAll(@Query() getTaxesDto: GetTaxesDto) {
     return this.taxesService.findAll();

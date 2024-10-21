@@ -25,6 +25,7 @@ async findAll({
     orderBy,
     sortedBy,
     search,
+    language
   }: GetPublicationDto): Promise<any> {
     // Default page and limit values
     if (!page) page = 1;
@@ -41,11 +42,19 @@ async findAll({
     let query: admin.firestore.Query = publicationCollection;
   
     // Handle filtering by name if provided
-    if (name) {
-      // You can modify the field name based on how it's stored in Firestore
-      query = query.where('name', '>=', name).where('name', '<=', name + '\uf8ff');
-    }
-  
+    // if (name) {
+    //   // You can modify the field name based on how it's stored in Firestore
+    //   query = query.where('name', '>=', name).where('name', '<=', name + '\uf8ff');
+    // }
+    // if (name && language) {
+    //   const titleField = `translations.${language}.title`;
+    //   query = query.where(titleField, '>=', name).where(titleField, '<=', name + '\uf8ff');
+    // }
+
+
+    // if (orderBy === 'title') {
+    //   orderBy = `translations.${language}.title`
+    // }
     // Handle sorting
     const fieldToOrderBy = orderBy || 'created_at'; // Default to created_at if orderBy is not provided
     const sortDirection = sortedBy === 'asc' ? 'asc' : 'desc'; // Default to descending order if not provided

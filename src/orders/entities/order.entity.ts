@@ -69,6 +69,7 @@ export class Order extends CoreFirebaseEntity {
   payment_intent: PaymentIntent;
   altered_payment_gateway?: string;
   name?: string;
+  invoice_url?: string;
 }
 
 export class OrderFiles extends CoreEntity {

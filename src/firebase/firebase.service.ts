@@ -63,9 +63,9 @@ export class FirebaseService {
     await docRef.set({...data, updated_at: timestamp}, { merge: true }); // Use merge to update only the fields provided
   }
 
-  async uploadFile(file: Express.Multer.File): Promise<string> {
+  async uploadFile(file: Express.Multer.File,fileDir: string = 'attachments'): Promise<string> {
     const bucket = admin.storage().bucket();
-    const fileName = `attachments/${Date.now()}_${file.originalname}`;
+    const fileName = `${fileDir}/${Date.now()}_${file.originalname}`;
     const fileUpload = bucket.file(fileName);
 
     await fileUpload.save(file.buffer, {

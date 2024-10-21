@@ -4,10 +4,12 @@ import {
   UseInterceptors,
   UploadedFiles,
   BadRequestException,
+  Body,
 } from '@nestjs/common';
 // import { FilesInterceptor } from '@nestjs/platform-express';
 import { UploadsService } from './uploads.service';
 import { FileInterceptor } from '../common/middleware/file.interceptor';
+import { FileCategory } from './entites/file-category';
 
 @Controller('attachments')
 export class UploadsController {
@@ -23,13 +25,16 @@ export class UploadsController {
       },
     }),
   )
-  async uploadFile(@UploadedFiles() attachment?: Array<Express.Multer.File>) {
+  async uploadFile(
+    @UploadedFiles() attachment?: Array<Express.Multer.File>,
+    @Body('file_category') file_category?: FileCategory
+  ) {
     if (!attachment || attachment.length === 0) {
       console.error('No file received');
       throw new BadRequestException('No file received');
     }
     const uploadPromises = attachment.map(file =>
-      this.uploadsService.uploadFile(file),
+      this.uploadsService.uploadFile(file,file_category),
     );
     try {
       const result = await Promise.all(uploadPromises);

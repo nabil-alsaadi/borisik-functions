@@ -12,6 +12,7 @@ export class GetReviewsDto extends PaginationArgs {
   sortedBy?: SortOrder;
   search?: string;
   product_id?: string;
+  placeId: string;
 }
 
 export enum QueryReviewsOrderByColumn {

@@ -45,12 +45,16 @@ import { OrderProductPivot, Product } from '../products/entities/product.entity'
 import { User } from '../users/entities/user.entity';
 import * as admin from 'firebase-admin';
 import { applyOrderTranslations, getSearchParam } from '../utils/utils';
+import { ShippingsService } from '../shippings/shippings.service';
+import { TaxesService } from '../taxes/taxes.service';
+import { Shipping } from '../shippings/entities/shipping.entity';
+import { Tax } from '../taxes/entities/tax.entity';
 
 const orders = plainToClass(Order, ordersJson);
 const paymentIntents = plainToClass(PaymentIntent, paymentIntentJson);
 const paymentGateways = plainToClass(PaymentGateWay, paymentGatewayJson);
 const orderStatus = plainToClass(OrderStatus, orderStatusJson);
-const shipping_charge = 20
+// const shipping_charge = 20
 const options = {
   keys: ['name'],
   threshold: 0.3,
@@ -71,7 +75,9 @@ export class OrdersService {
     // private readonly authService: AuthService,
     private readonly stripeService: StripePaymentService,
     // private readonly paypalService: PaypalPaymentService,
-    private readonly firebaseService: FirebaseService
+    private readonly firebaseService: FirebaseService,
+    private readonly shippingsService: ShippingsService,
+    private readonly taxesService: TaxesService,
   ) {}
   // async create(createOrderInput: CreateOrderDto): Promise<Order> {
   //   const order: Order = this.orders[0];
@@ -331,11 +337,8 @@ export class OrdersService {
   //   };
   // }
   async verifyCheckout(input: CheckoutVerificationDto): Promise<VerifiedCheckoutData> {
-    const productIds = input.products.map((product) => product.product_id); // Get all product IDs from the input
     
-    // Fetch all products in one call from Firebase
     const allProducts: Product[] = await this.firebaseService.getCollection('products')
-  
     const unavailableProducts: string[] = [];
     const availableProducts: ConnectProductOrderPivot[] = [];
     let subtotal = 0;
@@ -369,9 +372,12 @@ export class OrdersService {
         unavailableProducts.push(product.product_id);
       }
     }
-  
+    const shipping_charge = await this.getFirstShippingCharge();
+
+    // Get the first tax rate from the TaxesService
+    const taxRate = await this.getFirstTaxRate();
     // Calculate total tax (5%)
-    const totalTax = subtotal * 0.05;
+    const totalTax = subtotal * taxRate;
   
     // Calculate total (subtotal + tax + shipping charge)
     const total = subtotal + totalTax + shipping_charge;
@@ -387,6 +393,16 @@ export class OrdersService {
       subtotal: subtotal,
       total: total,
     };
+  }
+  private async getFirstShippingCharge(): Promise<number> {
+    const shippingCharges: Shipping[] = await this.shippingsService.getShippings({}); // Assuming it fetches all
+    return shippingCharges[0]?.amount || 0; // Return the first shipping rate or 0 if not available
+  }
+  
+  // Helper method to get the first tax rate
+  private async getFirstTaxRate(): Promise<number> {
+    const taxes: Tax[] = await this.taxesService.findAll(); // Assuming it fetches all
+    return (taxes[0]?.rate / 100) || 0; // Return the first tax rate or 0.05 (default 5%) if not available
   }
 
   async getOrders({
@@ -903,13 +919,37 @@ export class OrdersService {
    * @param orderPaymentDto
    */
   async stripePay(order: Order) {
+    // this.firebaseService.setWithMerge("orders",order.id,{
+    //   order_status: OrderStatusType.PROCESSING,
+    //   payment_status: PaymentStatusType.SUCCESS
+    // })
+    // this.orders[0]['order_status'] = OrderStatusType.PROCESSING;
+    // this.orders[0]['payment_status'] = PaymentStatusType.SUCCESS;
+    // this.orders[0]['payment_intent'] = null;
+  }
+  async stripePaySuccess(trackingNumber: string) {
+    const order = await this.getOrderByIdOrTrackingNumber(trackingNumber)
+
     this.firebaseService.setWithMerge("orders",order.id,{
       order_status: OrderStatusType.PROCESSING,
       payment_status: PaymentStatusType.SUCCESS
     })
-    // this.orders[0]['order_status'] = OrderStatusType.PROCESSING;
-    // this.orders[0]['payment_status'] = PaymentStatusType.SUCCESS;
-    // this.orders[0]['payment_intent'] = null;
+  }
+
+  async stripePayChargeSuccess(trackingNumber: string,invoice:string) {
+    const order = await this.getOrderByIdOrTrackingNumber(trackingNumber)
+
+    this.firebaseService.setWithMerge("orders",order.id,{
+      invoice_url: invoice
+    })
+  }
+
+  async stripePayFail(trackingNumber: string) {
+    const order = await this.getOrderByIdOrTrackingNumber(trackingNumber)
+    this.firebaseService.setWithMerge("orders",order.id,{
+      order_status: OrderStatusType.PENDING,
+      payment_status: PaymentStatusType.FAILED
+    })
   }
 
   // async paypalPay(order: Order) {

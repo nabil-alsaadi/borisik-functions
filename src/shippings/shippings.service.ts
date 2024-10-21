@@ -1,34 +1,40 @@
 import { Injectable } from '@nestjs/common';
-import { plainToClass } from 'class-transformer';
+import { FirebaseService } from '../firebase/firebase.service';
 import { CreateShippingDto } from './dto/create-shipping.dto';
 import { GetShippingsDto } from './dto/get-shippings.dto';
 import { UpdateShippingDto } from './dto/update-shipping.dto';
 import { Shipping } from './entities/shipping.entity';
-import shippingsJson from '../db/shippings.json';
-
-const shippings = plainToClass(Shipping, shippingsJson);
 
 @Injectable()
 export class ShippingsService {
-  private shippings: Shipping[] = shippings;
+  private collectionName = 'shippings';
 
-  create(createShippingDto: CreateShippingDto) {
-    return this.shippings[0];
+  constructor(private readonly firebaseService: FirebaseService) {}
+
+  // Create a new shipping record in Firestore
+  async create(createShippingDto: CreateShippingDto): Promise<Shipping> {
+    const id = await this.firebaseService.addDocument(this.collectionName, createShippingDto);
+    return this.firebaseService.getDocumentById<Shipping>(this.collectionName, id);
   }
 
-  getShippings({}: GetShippingsDto) {
-    return this.shippings;
+  // Get all shipping records from Firestore
+  async getShippings(getShippingsDto: GetShippingsDto): Promise<Shipping[]> {
+    return this.firebaseService.getCollection<Shipping>(this.collectionName);
   }
 
-  findOne(id: number) {
-    return this.shippings.find((shipping) => shipping.id === Number(id));
+  // Get a single shipping record by ID from Firestore
+  async findOne(id: number): Promise<Shipping | null> {
+    return this.firebaseService.getDocumentById<Shipping>(this.collectionName, id.toString());
   }
 
-  update(id: number, updateShippingDto: UpdateShippingDto) {
-    return this.shippings[0];
+  // Update a shipping record by ID in Firestore
+  async update(id: number, updateShippingDto: UpdateShippingDto): Promise<Shipping> {
+    await this.firebaseService.updateDocument(this.collectionName, id.toString(), updateShippingDto);
+    return this.firebaseService.getDocumentById<Shipping>(this.collectionName, id.toString());
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} shipping`;
+  // Delete a shipping record by ID in Firestore
+  async remove(id: number): Promise<void> {
+    return this.firebaseService.removeDocument(this.collectionName, id.toString());
   }
 }

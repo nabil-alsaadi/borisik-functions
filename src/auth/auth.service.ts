@@ -117,6 +117,9 @@ export class AuthService {
     if (!user) {
       throw new UnauthorizedException('Invalid email or password');
     }
+    if(!user.is_active) {
+      throw new UnauthorizedException('User is not active');
+    }
 
     // Step 2: Check if the password matches
     const isPasswordMatching = await bcrypt.compare(password, user.password);

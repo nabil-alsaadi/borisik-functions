@@ -46,6 +46,8 @@ import { FirebaseModule } from './firebase/firebase.module';
 import { LoggerMiddleware } from './common/middleware/logger.middleware';
 import { STRIPE_API_KEY } from './utils/config.util';
 import { PublicationsModule } from './publications/publications.module';
+import { VacanciesModule } from './vacancies/vacancies.module';
+import { ApplicationsModule } from './applications/applications.module';
 
 @Module({
   imports: [
@@ -108,7 +110,9 @@ import { PublicationsModule } from './publications/publications.module';
     FlashSaleModule,
     RefundPoliciesModule,
     RefundReasonModule,
-    PublicationsModule
+    PublicationsModule,
+    VacanciesModule,
+    ApplicationsModule
   ],
   controllers: [],
   providers: [],

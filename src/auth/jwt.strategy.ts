@@ -20,8 +20,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     // console.log('payload ======', payload)
     const user = await this.authService.getUserById(payload.uid);
     user.isAdmin = this.isAdmin(user) 
-    if (!user) {
-      throw new UnauthorizedException();
+    console.log('user.is_active=================',user.is_active)
+    if (!user || !user.is_active) {
+      throw new UnauthorizedException('User is not active or does not exist');
     }
     return user; // Attach user to request
   }
