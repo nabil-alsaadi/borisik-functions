@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { STRIPE_API_KEY } from '../utils/config.util';
+// import { STRIPE_API_KEY_PRODUCTION, STRIPE_API_KEY_TESTING, WEBHOOK_STRIPE_SECRET_LOCAL, WEBHOOK_STRIPE_SECRET_PRODUCTION, WEBHOOK_STRIPE_SECRET_TESTING } from '../utils/config.util';
 import Stripe from 'stripe';
 import { OrdersService } from '../orders/orders.service';
 
@@ -8,13 +8,19 @@ export class WebHookService {
   private stripeClient: Stripe;
   constructor(private readonly orderService: OrdersService) {
     
-    this.stripeClient = new Stripe(STRIPE_API_KEY, { apiVersion: '2022-11-15' });
+    // this.stripeClient = new Stripe(STRIPE_API_KEY_TESTING, { apiVersion: '2022-11-15' });
   }
-  endpointSecret = "whsec_1a4729ff418a805c47d4bd76418a6c76edbf819267fbc0dc4e4b5c956b8b4be2";
+
   razorPay() {
     return `this action is for razorpay pay`;
   }
-  stripe(body: any, sig: string) {
+  stripe(body: any, sig: string,environment: string) {
+    console.log('stripe webhook called:', environment);
+
+    const stripeKey = environment === 'production' ? process.env.STRIPE_API_KEY_PRODUCTION : process.env.STRIPE_API_KEY_TESTING;
+    const webhookSecret = environment === 'production' ? process.env.WEBHOOK_STRIPE_SECRET_PRODUCTION : process.env.WEBHOOK_STRIPE_SECRET_TESTING; //WEBHOOK_STRIPE_SECRET_LOCAL // 
+    this.stripeClient = new Stripe(stripeKey, { apiVersion: '2022-11-15' });
+
     console.log('stripe',body,sig)
     if (!body || body.length === 0) {
       throw new BadRequestException('No webhook payload was provided.');
@@ -22,7 +28,7 @@ export class WebHookService {
     
     let event;
     try {
-       event = this.stripeClient.webhooks.constructEvent(body, sig, this.endpointSecret);
+       event = this.stripeClient.webhooks.constructEvent(body, sig, webhookSecret);
        console.log('event',event)
     } catch (err) {
       console.log('Webhook Error:',err.message)

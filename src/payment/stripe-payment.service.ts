@@ -18,18 +18,24 @@ import {
   StripePaymentIntent,
   StripePaymentMethod,
 } from './entity/stripe.entity';
-import { DEFUALT_CURRENCY, STRIPE_API_KEY } from '../utils/config.util';
+import { DEFUALT_CURRENCY } from '../utils/config.util';
 
-
-const paymentGateways = plainToClass(PaymentGateWay, paymentGatewayJson);
-const setting = plainToClass(Setting, settingJson);
 @Injectable()
 export class StripePaymentService {
-  private paymentGateways: PaymentGateWay[] = paymentGateways;
 
   private stripeClient: Stripe;
-  constructor() {
-    this.stripeClient = new Stripe(STRIPE_API_KEY, { apiVersion: '2022-11-15' });
+  // constructor() {
+  //   this.stripeClient = new Stripe(STRIPE_API_KEY_TESTING, { apiVersion: '2022-11-15' });
+  // }
+
+  setEnvironment(environment: string) {
+    const stripeKey =
+      environment === 'production'
+        ? process.env.STRIPE_API_KEY_PRODUCTION
+        : process.env.STRIPE_API_KEY_TESTING;
+
+    this.stripeClient = new Stripe(stripeKey, { apiVersion: '2022-11-15' });
+    console.log(`Stripe client initialized for ${environment}`);
   }
   // constructor(@InjectStripe() private readonly stripeClient: Stripe) {}
 

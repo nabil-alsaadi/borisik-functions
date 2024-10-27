@@ -12,11 +12,18 @@ dotenv.config();
 // export const DEFUALT_CURRENCY = "AED"
 
 export const FIREBASE_PROJECT_ID = "borisik-products"
-export const STRIPE_API_KEY = "sk_test_51Pux7c2NkYjLD9z2kPbGpwrB6QqYn7j2Dy3ixL2SJoLWT99EEdwfTXcmd0NqyfQDyxZtx4P62iGPkzwGlutxVHhy001g5zGgCd";
+
 export const FIREBASE_STORAGE_BUCKET="borisik-products.appspot.com"
 export const JWT_SECRET = "your_jwt_secret_value"
 export const DEFUALT_CURRENCY = "AED"
 export const MY_FIREBASE_PROJECT_ID = "borisik-products"
+
+
+export const EMAIL_VERIFICATION_LINK = "https://redcaviar.ae/email-verification?token="
+
+export const GMAIL_USER = ""
+export const GMAIL_PASS = ""
+export const SUPPORT_EMAIL = ""
 // const isEmulator = process.env.FUNCTIONS_EMULATOR;
 
 // export const getConfig = () => {

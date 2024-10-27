@@ -79,60 +79,8 @@ export class OrdersService {
     private readonly shippingsService: ShippingsService,
     private readonly taxesService: TaxesService,
   ) {}
-  // async create(createOrderInput: CreateOrderDto): Promise<Order> {
-  //   const order: Order = this.orders[0];
-  //   const payment_gateway_type = createOrderInput.payment_gateway
-  //     ? createOrderInput.payment_gateway
-  //     : PaymentGatewayType.CASH_ON_DELIVERY;
-  //   order.payment_gateway = payment_gateway_type;
-  //   order.payment_intent = null;
-  //   // set the order type and payment type
-
-  //   switch (payment_gateway_type) {
-  //     case PaymentGatewayType.CASH_ON_DELIVERY:
-  //       order.order_status = OrderStatusType.PROCESSING;
-  //       order.payment_status = PaymentStatusType.CASH_ON_DELIVERY;
-  //       break;
-  //     case PaymentGatewayType.CASH:
-  //       order.order_status = OrderStatusType.PROCESSING;
-  //       order.payment_status = PaymentStatusType.CASH;
-  //       break;
-  //     case PaymentGatewayType.FULL_WALLET_PAYMENT:
-  //       order.order_status = OrderStatusType.COMPLETED;
-  //       order.payment_status = PaymentStatusType.WALLET;
-  //       break;
-  //     default:
-  //       order.order_status = OrderStatusType.PENDING;
-  //       order.payment_status = PaymentStatusType.PENDING;
-  //       break;
-  //   }
-  //   const id = await this.firebaseService.addDocument('orders',order)
-  //   const storedOrder = await this.firebaseService.getDocumentById<Order>('orders',id)
-
-  //   return storedOrder
-  //   // order.children = this.processChildrenOrder(order);
-  //   // try {
-  //   //   if (
-  //   //     [
-  //   //       PaymentGatewayType.STRIPE,
-  //   //       PaymentGatewayType.PAYPAL,
-  //   //       PaymentGatewayType.RAZORPAY,
-  //   //     ].includes(payment_gateway_type)
-  //   //   ) {
-  //   //     const paymentIntent = await this.processPaymentIntent(
-  //   //       order,
-  //   //       this.setting,
-  //   //     );
-  //   //     order.payment_intent = paymentIntent;
-  //   //   }
-
-  //   //   return order;
-  //   // } catch (error) {
-  //   //   return order;
-  //   // }
-
-  // }
-  async create(createOrderInput: CreateOrderDto, user: User): Promise<Order> {
+  async create(createOrderInput: CreateOrderDto, user: User,environment: string): Promise<Order> {
+    this.stripeService.setEnvironment(environment);
     // Step 1: Fetch all products from the database
     const allProducts: Product[] = await this.firebaseService.getCollection('products')
   

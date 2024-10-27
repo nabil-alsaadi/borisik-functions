@@ -17,10 +17,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     return user.permissions.filter((item) => item.name === "super_admin").length > 0 
   }
   async validate(payload: any) {
-    // console.log('payload ======', payload)
+    console.log('payload ======', payload)
     const user = await this.authService.getUserById(payload.uid);
     user.isAdmin = this.isAdmin(user) 
-    console.log('user.is_active=================',user.is_active)
+    console.log('user.is_active=================',user.is_verified)
     if (!user || !user.is_active) {
       throw new UnauthorizedException('User is not active or does not exist');
     }

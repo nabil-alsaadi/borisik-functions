@@ -26,7 +26,7 @@ async function createNestServer(expressInstance: express.Express) {
     origin: '*', // Allow all origins
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE', // Allowed HTTP methods
     credentials: true, // Allow credentials (cookies, authorization headers)
-    allowedHeaders: 'Authorization, Content-Type', // Allowed headers
+    allowedHeaders: 'Authorization, Content-Type, x-environment', // Allowed headers
   };
 
   // Enable CORS

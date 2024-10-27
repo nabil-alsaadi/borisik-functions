@@ -13,7 +13,15 @@ export class WebHookController {
   async stripe(@Req() req: Request, @Headers('stripe-signature') signature: string) {
     //@ts-ignore
     const rawBody = req.rawBody;
-    return this.webHookServices.stripe(rawBody,signature);
+    console.log('stripe input=============================',rawBody,signature)
+    return this.webHookServices.stripe(rawBody,signature,'production');
+  }
+  @Post('stripe-testing')
+  async stripeTesting(@Req() req: Request, @Headers('stripe-signature') signature: string) {
+    //@ts-ignore
+    const rawBody = req.rawBody;
+    console.log('stripe input=============================',rawBody,signature)
+    return this.webHookServices.stripe(rawBody,signature,'testing');
   }
   @Get('paypal')
   paypal() {

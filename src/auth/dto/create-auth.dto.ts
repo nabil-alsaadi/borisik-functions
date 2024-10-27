@@ -84,3 +84,10 @@ export class OtpLoginDto {
   name?: string;
   email?: string;
 }
+
+export class ContactDto {
+  description: string;
+  subject: string;
+  name: string;
+  email: string;
+}

@@ -19,6 +19,8 @@ export class User extends CoreFirebaseEntity {
   isAdmin?: boolean = false;
   payment_methods?: PaymentMethod[];
   wishlist?: string[];
+  is_verified?: boolean = false
+  verification_link?: string
 }
 
 export class Permission extends CoreEntity {

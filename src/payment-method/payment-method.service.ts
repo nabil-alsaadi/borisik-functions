@@ -1,6 +1,6 @@
 import paymentGatewayJson from '../db/payment-gateway.json';
 import cards from '../db/payment-methods.json';
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 import { plainToClass } from 'class-transformer';
 import { AuthService } from '../auth/auth.service';
 import {
@@ -31,7 +31,8 @@ export class PaymentMethodService {
   ) {}
   // private setting: Setting = this.settingService.findAll();
 
-  async create(createPaymentMethodDto: CreatePaymentMethodDto,user: User) {
+  async create(createPaymentMethodDto: CreatePaymentMethodDto,user: User,environment: string) {
+    this.stripeService.setEnvironment(environment);
     let paymentMethods = user.payment_methods  ?? []
     try {
       const defaultCard = paymentMethods.find(
@@ -56,26 +57,30 @@ export class PaymentMethodService {
     }
   }
 
-  findAll(user: User) {
+  findAll(user: User,environment: string) {
+    this.stripeService.setEnvironment(environment);
     let paymentMethods = user.payment_methods  ?? []
     return paymentMethods;
   }
 
-  findOne(id: number,user: User) {
+  findOne(id: number,user: User,environment: string) {
+    this.stripeService.setEnvironment(environment);
     let paymentMethods = user.payment_methods  ?? []
     return paymentMethods.find(
       (pm: PaymentMethod) => pm.id === Number(id),
     );
   }
 
-  update(id: number, updatePaymentMethodDto: UpdatePaymentMethodDto) {
+  update(id: number, updatePaymentMethodDto: UpdatePaymentMethodDto,environment: string) {
+    this.stripeService.setEnvironment(environment);
     return //this.findOne(id);
   }
   async saveToUser(data: Partial<User>, id: string) {
     await this.firebaseService.setWithMerge('users',id,data)
   }
-  async remove(id: number,user: User) {
-    const card: PaymentMethod = this.findOne(id,user);
+  async remove(id: number,user: User,environment: string) {
+    this.stripeService.setEnvironment(environment);
+    const card: PaymentMethod = this.findOne(id,user,environment);
     let paymentMethods = user.payment_methods  ?? []
     const filtered = [...paymentMethods].filter(
       (cards: PaymentMethod) => cards.id !== id,
@@ -87,7 +92,8 @@ export class PaymentMethodService {
     return card;
   }
 
-  async saveDefaultCart(defaultCart: DefaultCart,user: User) {
+  async saveDefaultCart(defaultCart: DefaultCart,user: User,environment: string) {
+    this.stripeService.setEnvironment(environment);
     const { method_id } = defaultCart;
     let paymentMethods = user.payment_methods  ?? []
     const updatedpaymentMethods = [...paymentMethods].map((c: PaymentMethod) => {
@@ -103,10 +109,11 @@ export class PaymentMethodService {
     }
     await this.saveToUser(data,user.id)
     const newUser: User = await this.firebaseService.getDocumentById('users',user.id)
-    return this.findOne(Number(method_id),newUser);
+    return this.findOne(Number(method_id),newUser,environment);
   }
 
-  async savePaymentMethod(createPaymentMethodDto: CreatePaymentMethodDto, user: User) {
+  async savePaymentMethod(createPaymentMethodDto: CreatePaymentMethodDto, user: User,environment: string) {
+    this.stripeService.setEnvironment(environment);
     let paymentMethods = user.payment_methods  ?? []
     const paymentGateway: string = PaymentGatewayType.STRIPE as string;
     try {
@@ -131,12 +138,21 @@ export class PaymentMethodService {
     }
     const retrievedPaymentMethod =
       await this.stripeService.retrievePaymentMethod(method_key);
+    console.log('retrievedPaymentMethod',retrievedPaymentMethod)
     if (
       this.paymentMethodAlreadyExists(retrievedPaymentMethod.card.fingerprint,paymentMethods)
     ) {
-      return paymentMethods.find(
-        (pMethod: PaymentMethod) => pMethod.method_key === method_key,
+      // if payment card exist return the saved one
+      const pm = paymentMethods.find(
+        (pMethod: PaymentMethod) => pMethod.fingerprint === retrievedPaymentMethod.card.fingerprint,
       );
+      if (pm){
+        return pm
+      }
+      else {
+        throw new ConflictException('payment issue please contact support');
+      } 
+      
     } else {
       const paymentMethod = await this.makeNewPaymentMethodObject(
         createPaymentMethodDto,

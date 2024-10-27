@@ -5,6 +5,7 @@ import { PassportModule } from '@nestjs/passport';
 import { JwtStrategy } from './jwt.strategy';
 import { JwtService } from './jwt.service';
 import { FirebaseModule } from '../firebase/firebase.module';
+import { EmailService } from './email.services';
 
 @Module({
   imports: [
@@ -12,7 +13,7 @@ import { FirebaseModule } from '../firebase/firebase.module';
     FirebaseModule
   ],
   controllers: [AuthController],
-  providers: [AuthService,JwtStrategy,JwtService],
+  providers: [AuthService,JwtStrategy,JwtService,EmailService],
   exports: [AuthService,JwtService],
 })
 export class AuthModule {}

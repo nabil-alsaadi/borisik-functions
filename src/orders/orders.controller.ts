@@ -10,6 +10,7 @@ import {
   Put,
   Query,
   Req,
+  Headers,
   UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
@@ -36,8 +37,9 @@ export class OrdersController {
   
   
   @Post()
-  async create(@Req() req,@Body() createOrderDto: CreateOrderDto): Promise<Order> {
-    return this.ordersService.create(createOrderDto, req.user);
+  async create(@Req() req,@Body() createOrderDto: CreateOrderDto, @Headers('x-environment') environment: string): Promise<Order> {
+    console.log('async create(@Req() environment============',environment)
+    return this.ordersService.create(createOrderDto, req.user,environment);
   }
 
   @Get()

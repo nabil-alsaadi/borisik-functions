@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, InternalServerErrorException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, InternalServerErrorException, UnauthorizedException } from '@nestjs/common';
 import {
   AuthResponse,
   ChangePasswordDto,
@@ -24,7 +24,8 @@ import { FirebaseService } from '../firebase/firebase.service';
 import * as bcrypt from 'bcrypt'; // For password hashing
 import * as jwt from 'jsonwebtoken'; // For generating JWT
 import { JwtService } from './jwt.service';
-import { JWT_SECRET } from '../utils/config.util';
+import { EMAIL_VERIFICATION_LINK, JWT_SECRET } from '../utils/config.util';
+import { EmailService } from './email.services';
 
 const users = plainToClass(User, usersJson);
 
@@ -33,10 +34,11 @@ export class AuthService {
   constructor(
     private readonly firebaseService: FirebaseService,
     private readonly jwtService: JwtService,
+    private readonly emailService: EmailService,
   ) {}
 
   private users: User[] = users;
-
+  
   async register(createUserInput: RegisterDto): Promise<AuthResponse> {
     const { email, password, name, permission } = createUserInput;
 
@@ -75,10 +77,20 @@ export class AuthService {
       created_at: new Date(),
       updated_at: new Date(),
       is_active: true,
+      is_verified: false
     };
 
     // Step 4: Store user data in Firestore using Firebase's auto-generated ID
     const userId = await this.firebaseService.addDocument('users', userData);
+
+    const verificationToken = this.jwtService.generateToken({
+      uid: userId,
+      email: email
+    }, '1h');
+
+    await this.emailService.sendVerificationEmail(email, verificationToken);
+
+    await this.firebaseService.updateDocument('users',userId,{verification_link: `${EMAIL_VERIFICATION_LINK}${verificationToken}`})
 
     const token = this.jwtService.generateToken({
       uid: userId,
@@ -91,20 +103,36 @@ export class AuthService {
       token: token, // JWT token
       permissions: [userData.permissions[0].toString()], // Return the user's permission
     };
-    // const user: User = {
-    //   id: uuidv4(),
-    //   ...users[0],
-    //   ...createUserInput,
-    //   created_at: new Date(),
-    //   updated_at: new Date(),
-    // };
-
-    // this.users.push(user);
-    // return {
-    //   token: 'jwt token',
-    //   permissions: ['super_admin', 'customer'],
-    // };
   }
+  async resendEmail(user: User){
+    await this.emailService.sendVerificationEmail(user.email, user.verification_link);
+    return {message: 'sucesfully send email'}
+  }
+  
+  async verifyEmail(token: string): Promise<string> {
+    try {
+      const decoded = this.jwtService.verifyToken(token);
+  
+      // Retrieve the user by ID
+      const user = await this.getUserById(decoded.uid);
+      if (!user) {
+        throw new BadRequestException('User not found');
+      }
+  
+      // Check if the user is already verified
+      if (user.is_verified) {
+        return 'User already verified';
+      }
+  
+      // Mark user as verified in Firestore
+      await this.firebaseService.updateDocument('users', user.id, { is_verified: true });
+  
+      return 'Email verified successfully';
+    } catch (error) {
+      throw new BadRequestException('Invalid or expired token');
+    }
+  }
+  
   isAdmin(user: User) {
     return user.permissions.filter((item) => item.name === "super_admin").length > 0 
   }
@@ -117,6 +145,9 @@ export class AuthService {
     if (!user) {
       throw new UnauthorizedException('Invalid email or password');
     }
+    // if (!user.is_verified) {
+    //   throw new ConflictException('Please verify your email before logging in.');
+    // }
     if(!user.is_active) {
       throw new UnauthorizedException('User is not active');
     }
@@ -145,26 +176,6 @@ export class AuthService {
       permissions: user.permissions.map(p => p.name), // Convert permissions to string if needed
       role: this.isAdmin(user) ? 'super_admin' : 'customer', // Example role logic
     };
-    // console.log(loginInput);
-    // if (loginInput.email === 'admin@demo.com') {
-    //   return {
-    //     token: 'jwt token',
-    //     permissions: ['store_owner', 'super_admin'],
-    //     role: 'super_admin',
-    //   };
-    // } else if (['store_owner@demo.com', 'vendor@demo.com'].includes(loginInput.email)) {
-    //   return {
-    //     token: 'jwt token',
-    //     permissions: ['store_owner', 'customer'],
-    //     role: 'store_owner',
-    //   };
-    // } else {
-    //   return {
-    //     token: 'jwt token',
-    //     permissions: ['customer'],
-    //     role: 'customer',
-    //   };
-    // }
   }
   private async getUserByEmail(email: string): Promise<User | null> {
     const users = await this.firebaseService.getCollection<User>('users', ref => ref.where('email', '==', email).limit(1));
@@ -176,7 +187,7 @@ export class AuthService {
     if (!userDoc) {
       throw new UnauthorizedException('User not found');
     }
-  
+    console.log('userDoc ===========',userDoc,userDoc.is_verified)
     const { password, ...userWithoutPassword } = userDoc;
 
   return userWithoutPassword as User;
@@ -233,36 +244,113 @@ export class AuthService {
   //   };
   // }
 
-  async forgetPassword(
-    forgetPasswordInput: ForgetPasswordDto,
-  ): Promise<CoreResponse> {
-    console.log(forgetPasswordInput);
+  // async forgetPassword(
+  //   forgetPasswordInput: ForgetPasswordDto,
+  // ): Promise<CoreResponse> {
+  //   console.log(forgetPasswordInput);
 
+  //   return {
+  //     success: true,
+  //     message: 'Password change successful',
+  //   };
+  // }
+  
+  // async verifyForgetPasswordToken(
+  //   verifyForgetPasswordTokenInput: VerifyForgetPasswordDto,
+  // ): Promise<CoreResponse> {
+  //   console.log(verifyForgetPasswordTokenInput);
+
+  //   return {
+  //     success: true,
+  //     message: 'Password change successful',
+  //   };
+  // }
+  // async resetPassword(
+  //   resetPasswordInput: ResetPasswordDto,
+  // ): Promise<CoreResponse> {
+  //   console.log(resetPasswordInput);
+
+  //   return {
+  //     success: true,
+  //     message: 'Password change successful',
+  //   };
+  // }
+  async forgetPassword(forgetPasswordInput: ForgetPasswordDto): Promise<CoreResponse> {
+    const { email } = forgetPasswordInput;
+  
+    // Step 1: Check if user exists
+    const user = await this.getUserByEmail(email);
+    if (!user) {
+      throw new BadRequestException('Email does not exist');
+    }
+  
+    // Step 2: Generate a JWT reset token with an expiration time
+    const resetToken = this.jwtService.generateToken(
+      { uid: user.id, email: user.email },
+      '1h' // Token expires in 1 hour
+    );
+  
+    // Step 3: Send the token to the user's email
+    await this.firebaseService.updateDocument('users',user.id,{forget_pass_token: resetToken})
+    await this.emailService.sendResetPasswordEmail(email, resetToken);
+  
     return {
       success: true,
-      message: 'Password change successful',
+      message: 'Password reset link sent to your email',
     };
   }
+  
+  async resetPassword(resetPasswordInput: ResetPasswordDto): Promise<CoreResponse> {
+    const { token, password } = resetPasswordInput;
+  
+    try {
+      // Step 1: Verify the token
+      const decoded = this.jwtService.verifyToken(token);
+      const userId = decoded.uid;
+  
+      // Step 2: Hash the new password
+      const hashedPassword = await bcrypt.hash(password, 10);
+  
+      // Step 3: Update the user's password
+      await this.firebaseService.updateDocument('users', userId, {
+        password: hashedPassword,
+      });
+  
+      return {
+        success: true,
+        message: 'Password has been reset successfully',
+      };
+    } catch (error) {
+      throw new BadRequestException('Invalid or expired reset token');
+    }
+  }
+
   async verifyForgetPasswordToken(
     verifyForgetPasswordTokenInput: VerifyForgetPasswordDto,
   ): Promise<CoreResponse> {
-    console.log(verifyForgetPasswordTokenInput);
-
-    return {
-      success: true,
-      message: 'Password change successful',
-    };
+    const { email, token } = verifyForgetPasswordTokenInput;
+  
+    try {
+      // Decode and verify the token using your JWT service
+      const decoded = this.jwtService.verifyToken(token);
+      
+      // Check if the token's email matches the provided email
+      if (decoded.email !== email) {
+        throw new BadRequestException('Invalid token for the provided email');
+      }
+  
+      // Token is valid
+      return {
+        success: true,
+        message: 'Token verified successfully. You may proceed with resetting your password.',
+      };
+    } catch (error) {
+      // Handle expired or invalid tokens
+      throw new BadRequestException('Invalid or expired reset token');
+    }
   }
-  async resetPassword(
-    resetPasswordInput: ResetPasswordDto,
-  ): Promise<CoreResponse> {
-    console.log(resetPasswordInput);
-
-    return {
-      success: true,
-      message: 'Password change successful',
-    };
-  }
+  
+  
   async socialLogin(socialLoginDto: SocialLoginDto): Promise<AuthResponse> {
     console.log(socialLoginDto);
     return {
