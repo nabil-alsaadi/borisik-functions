@@ -18,7 +18,7 @@ export class WebHookService {
     console.log('stripe webhook called:', environment);
 
     const stripeKey = environment === 'production' ? process.env.STRIPE_API_KEY_PRODUCTION : process.env.STRIPE_API_KEY_TESTING;
-    const webhookSecret = environment === 'production' ? process.env.WEBHOOK_STRIPE_SECRET_PRODUCTION : process.env.WEBHOOK_STRIPE_SECRET_TESTING; //WEBHOOK_STRIPE_SECRET_LOCAL // 
+    const webhookSecret = process.env.WEBHOOK_STRIPE_SECRET_LOCAL //environment === 'production' ? process.env.WEBHOOK_STRIPE_SECRET_PRODUCTION : process.env.WEBHOOK_STRIPE_SECRET_TESTING; //WEBHOOK_STRIPE_SECRET_LOCAL // 
     this.stripeClient = new Stripe(stripeKey, { apiVersion: '2022-11-15' });
 
     console.log('stripe',body,sig)

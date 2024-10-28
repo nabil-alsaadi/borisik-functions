@@ -19,7 +19,7 @@ import { User } from '../users/entities/user.entity';
 import { FirebaseService } from '../firebase/firebase.service';
 
 // const paymentMethods = plainToClass(PaymentMethod, cards);
-const paymentGateways = plainToClass(PaymentGateWay, paymentGatewayJson);
+// const paymentGateways = plainToClass(PaymentGateWay, paymentGatewayJson);
 @Injectable()
 export class PaymentMethodService {
   // private paymentMethods: PaymentMethod[] = paymentMethods;
@@ -52,8 +52,8 @@ export class PaymentMethodService {
       const paymentGateway: string = PaymentGatewayType.STRIPE as string;
       return await this.saveCard(createPaymentMethodDto, paymentGateway,user,paymentMethods);
     } catch (error) {
-      console.log(error);
-      return paymentMethods[0];
+      console.error('Error creating payment method:', error);
+      throw new ConflictException('Unable to create payment method. Please try again.');
     }
   }
 
@@ -143,14 +143,14 @@ export class PaymentMethodService {
       this.paymentMethodAlreadyExists(retrievedPaymentMethod.card.fingerprint,paymentMethods)
     ) {
       // if payment card exist return the saved one
-      const pm = paymentMethods.find(
+      const existingPaymentMethod = paymentMethods.find(
         (pMethod: PaymentMethod) => pMethod.fingerprint === retrievedPaymentMethod.card.fingerprint,
       );
-      if (pm){
-        return pm
+      if (existingPaymentMethod){
+        return existingPaymentMethod
       }
       else {
-        throw new ConflictException('payment issue please contact support');
+        throw new Error('payment issue please contact support');
       } 
       
     } else {
@@ -167,16 +167,6 @@ export class PaymentMethodService {
       await this.saveToUser(data,user.id);
       return paymentMethod;
     }
-    // switch (paymentGateway) {
-    //   case 'stripe':
-    //     break;
-    //   case 'paypal':
-    //     // TODO
-    //     //paypal code goes here
-    //     break;
-    //   default:
-    //     break;
-    // }
   }
   paymentMethodAlreadyExists(fingerPrint: string, paymentMethods: PaymentMethod[]) {
     const paymentMethod = paymentMethods.find(
@@ -187,7 +177,7 @@ export class PaymentMethodService {
     }
     return false;
   }
-
+  
   async makeNewPaymentMethodObject(
     createPaymentMethodDto: CreatePaymentMethodDto,
     paymentGateway: string,
@@ -195,38 +185,17 @@ export class PaymentMethodService {
   ) {
     const { method_key, default_card } = createPaymentMethodDto;
     const { id: user_id, name, email } = user;
-    const listofCustomer = await this.stripeService.listAllCustomer();
-    let currentCustomer = listofCustomer.data.find(
-      (customer: StripeCustomer) => customer.email === email,
-    );
+    let currentCustomer = await this.stripeService.listCustomerByEmail(email);
+
     if (!currentCustomer) {
-      const newCustomer = await this.stripeService.createCustomer({
-        name,
-        email,
-      });
-      currentCustomer = newCustomer;
+      currentCustomer = await this.stripeService.createCustomer({ name, email });
     }
     const attachedPaymentMethod: StripePaymentMethod =
       await this.stripeService.attachPaymentMethodToCustomer(
         method_key,
         currentCustomer.id,
       );
-    let customerGateway: PaymentGateWay = paymentGateways.find(
-      (pGateway: PaymentGateWay) =>
-        String(pGateway.user_id) === (user_id) &&
-        pGateway.gateway_name === paymentGateway,
-    );
-    if (!customerGateway) {
-      customerGateway = {
-        id: Number(Date.now()),
-        user_id: user_id,
-        customer_id: currentCustomer['id'],
-        gateway_name: paymentGateway,
-        created_at: new Date(),
-        updated_at: new Date(),
-      };
-      paymentGateways.push(customerGateway);
-    }
+    const customerGateway = await this.findOrCreatePaymentGateway(user_id, paymentGateway, currentCustomer.id);
     const paymentMethod: PaymentMethod = {
       id: Number(Date.now()),
       method_key: method_key,
@@ -244,5 +213,35 @@ export class PaymentMethodService {
       updated_at: new Date(),
     };
     return paymentMethod;
+  }
+
+  private async findOrCreatePaymentGateway(
+    userId: string,
+    gatewayName: string,
+    customerId: string
+  ): Promise<PaymentGateWay> {
+    // Query Firebase to check if the gateway already exists
+    const gatewaySnapshot = await this.firebaseService.getCollection('paymentGateways', (ref) =>
+      ref.where('user_id', '==', userId).where('gateway_name', '==', gatewayName).limit(1)
+    );
+  
+    // If the gateway exists, return it
+    if (gatewaySnapshot.length > 0) {
+      return gatewaySnapshot[0] as PaymentGateWay;
+    }
+  
+    // Otherwise, create a new gateway record
+    const newGateway: PaymentGateWay = {
+      id: Number(Date.now()),
+      user_id: userId,
+      customer_id: customerId,
+      gateway_name: gatewayName,
+      created_at: new Date(),
+      updated_at: new Date(),
+    };
+  
+    // Save the new gateway record to Firebase and return it
+    await this.firebaseService.addDocument('paymentGateways', newGateway);
+    return newGateway;
   }
 }

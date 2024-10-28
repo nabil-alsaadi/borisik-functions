@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 import settingJson from '../db/settings.json';
 import { Setting } from '../settings/entities/setting.entity';
 import { plainToClass } from 'class-transformer';
@@ -50,7 +50,7 @@ export class StripePaymentService {
       console.log('createCustomerDto',createCustomerDto)
       return await this.stripeClient.customers.create(createCustomerDto);
     } catch (error) {
-      console.log('createCustomerDto error',error);
+      throw new ConflictException('Unable to create customer');
     }
   }
 
@@ -62,7 +62,7 @@ export class StripePaymentService {
     try {
       return await this.stripeClient.customers.retrieve(id);
     } catch (error) {
-      console.log(error);
+      throw new ConflictException('Unable to retrieve customer');
     }
   }
 
@@ -73,7 +73,24 @@ export class StripePaymentService {
     try {
       return await this.stripeClient.customers.list();
     } catch (error) {
-      console.log(error);
+      throw new ConflictException('Unable to list customers');
+    }
+  }
+
+  async listCustomerByEmail(email: string): Promise<StripeCustomer | null> {
+    try {
+      // Retrieve a customer by email with a limit of 1 for efficiency
+      const customerList = await this.stripeClient.customers.list({
+        email,
+        limit: 1,
+      });
+  
+      // Return the first customer if found; otherwise, return null
+      return customerList.data.length > 0 ? customerList.data[0] : null;
+  
+    } catch (error) {
+      console.error('Error listing customer by email:', error);
+      throw new ConflictException('Unable to retrieve customer data');
     }
   }
 
@@ -93,7 +110,7 @@ export class StripePaymentService {
       const { ...newPaymentMethod }: StripePaymentMethod = paymentMethod;
       return newPaymentMethod;
     } catch (error) {
-      console.log(error);
+      throw new ConflictException('Unable to create payment method');
     }
   }
 
@@ -107,7 +124,7 @@ export class StripePaymentService {
     try {
       return await this.stripeClient.paymentMethods.retrieve(method_key);
     } catch (error) {
-      console.log(error);
+      throw new ConflictException('Unable to retrieve payment method');
     }
   }
 
@@ -127,7 +144,7 @@ export class StripePaymentService {
       );
       return data;
     } catch (error) {
-      console.log(error);
+      throw new ConflictException('Unable to retrieve payment method');
     }
   }
 
@@ -146,7 +163,7 @@ export class StripePaymentService {
         customer: customer_id,
       });
     } catch (error) {
-      console.log('attachPaymentMethodToCustomer error=======',error);
+      throw new ConflictException('Unable to atach payment method');
     }
   }
 
@@ -160,7 +177,7 @@ export class StripePaymentService {
     try {
       return await this.stripeClient.paymentMethods.detach(method_id);
     } catch (error) {
-      console.log(error);
+      throw new ConflictException('Unable to deatach payment method');
     }
   }
 
@@ -178,7 +195,7 @@ export class StripePaymentService {
       const { ...newIntent }: StripePaymentIntent = paymentIntent;
       return newIntent;
     } catch (error) {
-      console.log(error);
+      throw new ConflictException('Unable to retrieve or create Intent');
     }
   }
 
@@ -192,34 +209,59 @@ export class StripePaymentService {
     try {
       return await this.stripeClient.paymentIntents.retrieve(payment_id);
     } catch (error) {
-      console.log(error);
+      throw new ConflictException('Unable to retrieve or create Intent');
     }
   }
 
-  async makePaymentIntentParam(order: Partial<Order>, me: User) {
-    const customerList = await this.listAllCustomer();
-    let currentCustomer = customerList.data.find(
-      (customer: StripeCustomer) => customer.email === me.email,
-    );
-    console.log('currentCustomer',currentCustomer,!!currentCustomer,!currentCustomer)
-    if (!currentCustomer) {
-      console.log('new customer condtion')
-      const newCustomer = await this.createCustomer({
-        name: me.name,
-        email: me.email,
-      });
-      console.log('newCustomer',newCustomer,newCustomer.id)
-      currentCustomer = newCustomer;
+  // async makePaymentIntentParam(order: Partial<Order>, me: User) {
+  //   const customerList = await this.listAllCustomer();
+  //   let currentCustomer = customerList.data.find(
+  //     (customer: StripeCustomer) => customer.email === me.email,
+  //   );
+  //   console.log('currentCustomer',currentCustomer,!!currentCustomer,!currentCustomer)
+  //   if (!currentCustomer) {
+  //     console.log('new customer condtion')
+  //     const newCustomer = await this.createCustomer({
+  //       name: me.name,
+  //       email: me.email,
+  //     });
+  //     console.log('newCustomer',newCustomer,newCustomer.id)
+  //     currentCustomer = newCustomer;
       
+  //   }
+  //   return {
+  //     customer: currentCustomer.id,
+  //     amount: Math.ceil(order.paid_total * 100),
+  //     currency: DEFUALT_CURRENCY,
+  //     payment_method_types: ['card'],
+  //     metadata: {
+  //       order_tracking_number: order.tracking_number,
+  //     },
+  //   };
+  // }
+  async makePaymentIntentParam(order: Partial<Order>, me: User) {
+    let currentCustomer: StripeCustomer | null;
+    try {
+      currentCustomer = await this.listCustomerByEmail(me.email);
+
+      if (!currentCustomer) {
+        // Create a new customer if not found
+        console.log('Creating new Stripe customer');
+        currentCustomer = await this.createCustomer({ name: me.name, email: me.email });
+      }
+    } catch (error) {
+      console.error('Error fetching or creating customer:', error);
+      throw new ConflictException('Unable to retrieve or create customer');
     }
+  
+    // Construct payment intent params
     return {
       customer: currentCustomer.id,
       amount: Math.ceil(order.paid_total * 100),
       currency: DEFUALT_CURRENCY,
       payment_method_types: ['card'],
-      metadata: {
-        order_tracking_number: order.tracking_number,
-      },
+      metadata: { order_tracking_number: order.tracking_number },
     };
   }
+  
 }

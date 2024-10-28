@@ -91,15 +91,9 @@ export class OrdersService {
       if (!productData) {
         throw new Error(`Product with ID ${productInput.product_id} not found`);
       }
-  
-      // Validate the order quantity is available
       if (productData.quantity < productInput.order_quantity) {
         throw new Error(`Insufficient quantity for product ID ${productInput.product_id}`);
       }
-      // Calculate the subtotal using the database price
-      // const subtotal = productData.price * productInput.order_quantity;
-  
-      // Return the product details along with the pivot data
       return {
         ...productData, // Include all fields from the full product data
         pivot: {

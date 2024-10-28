@@ -44,8 +44,8 @@ export class AuthService {
 
     // Step 1: Check if the email already exists
     const existingUser = await this.getUserByEmail(email);
-    if (existingUser) {
-      throw new BadRequestException('Email already exists');
+    if (existingUser && existingUser.is_verified) {
+        throw new BadRequestException('Email already exists');
     }
 
     // Step 2: Hash the password
@@ -126,10 +126,26 @@ export class AuthService {
   
       // Mark user as verified in Firestore
       await this.firebaseService.updateDocument('users', user.id, { is_verified: true });
+
+      // Clean up: Remove other unverified users with the same email
+      await this.cleanupUnverifiedUsers(user.email, user.id);
   
       return 'Email verified successfully';
     } catch (error) {
       throw new BadRequestException('Invalid or expired token');
+    }
+  }
+
+  private async cleanupUnverifiedUsers(email: string, verifiedUserId: string): Promise<void> {
+    const unverifiedUsers = await this.firebaseService.getCollection<User>('users', ref => 
+      ref.where('email', '==', email).where('is_verified', '==', false)
+    );
+  
+    // Delete all unverified users with the same email except the verified user
+    for (const unverifiedUser of unverifiedUsers) {
+      if (unverifiedUser.id !== verifiedUserId) {
+        await this.firebaseService.removeDocument('users', unverifiedUser.id);
+      }
     }
   }
   
@@ -179,7 +195,12 @@ export class AuthService {
   }
   private async getUserByEmail(email: string): Promise<User | null> {
     const users = await this.firebaseService.getCollection<User>('users', ref => ref.where('email', '==', email).limit(1));
-    return users.length > 0 ? users[0] : null;
+    if (users.length === 0) {
+      return null; // No user found
+    }
+
+    const verifiedUser = users.find(user => user.is_verified === true);
+    return verifiedUser || users[0];
   }
   async getUserById(userId: string): Promise<User> {
     const userDoc = await this.firebaseService.getDocumentById<User>('users', userId); // Use getDocumentById instead
