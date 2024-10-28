@@ -144,6 +144,7 @@ export class OrdersService {
       translated_languages: ["en"],
       children: [],
       payment_intent: createOrderInput.payment_intent,
+      is_seen: false
     };
   
     // Step 5: Set the payment gateway and order status
@@ -917,5 +918,8 @@ export class OrdersService {
   ) {
     this.orders[0]['order_status'] = orderStatus;
     this.orders[0]['payment_status'] = paymentStatus;
+  }
+  async orderSeen(id: string) {
+    await this.firebaseService.updateDocument('orders',id,{is_seen: true})
   }
 }

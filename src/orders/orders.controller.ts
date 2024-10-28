@@ -34,7 +34,10 @@ export class OrdersController {
   verifyCheckout(@Body() query: CheckoutVerificationDto) {
     return this.ordersService.verifyCheckout(query);
   }
-  
+  @Get('seen')
+  updateSeen(@Query('id') id: string) {
+    return this.ordersService.orderSeen(id);
+  }
   
   @Post()
   async create(@Req() req,@Body() createOrderDto: CreateOrderDto, @Headers('x-environment') environment: string): Promise<Order> {
@@ -47,6 +50,7 @@ export class OrdersController {
     // throw new UnauthorizedException();
     return this.ordersService.getOrders(query,req.user);
   }
+  
 
   @Get(':id')
   getOrderById(@Param('id') id: string, @Query('language') language) {

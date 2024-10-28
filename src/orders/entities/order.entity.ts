@@ -70,6 +70,7 @@ export class Order extends CoreFirebaseEntity {
   altered_payment_gateway?: string;
   name?: string;
   invoice_url?: string;
+  is_seen?: boolean;
 }
 
 export class OrderFiles extends CoreEntity {
